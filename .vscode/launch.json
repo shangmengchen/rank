@@ -1,0 +1,28 @@
+{
+    // Launch configuration for debugging with gdb (via MinGW or MSYS on Windows)
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug rank.exe (gdb)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/rank.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C++: Build (g++)"
+        }
+    ]
+}
+
+

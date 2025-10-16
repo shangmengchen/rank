@@ -1,0 +1,69 @@
+{
+    // VS Code tasks for building,运行和清理（修正为单一有效 JSON）
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Prep: Ensure build dir",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "if (!(Test-Path \"${workspaceFolder}/build\")) { New-Item -ItemType Directory -Path \"${workspaceFolder}/build\" | Out-Null }"
+            ]
+        },
+        {
+            "label": "C++: Build (g++)",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++17",
+                "-O2",
+                "-g",
+                "${workspaceFolder}/test.cpp",
+                "${workspaceFolder}/zset.cpp",
+                "-o",
+                "${workspaceFolder}/build/rank.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn": [
+                "Prep: Ensure build dir"
+            ]
+        },
+        {
+            "label": "C++: Run",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/rank.exe",
+            "group": "test",
+            "dependsOn": [
+                "C++: Build (g++)"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "if (Test-Path \"${workspaceFolder}/build\") { Remove-Item -Recurse -Force \"${workspaceFolder}/build\" }"
+            ]
+        }
+    ]
+}

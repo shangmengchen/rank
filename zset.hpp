@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
-#include <limits>
-#include <time.h>
+#include <cstdlib>
+#include <ctime>
 
 const int MAX_LEVEL = 16; // 最大层数
 const float P = 0.5;      // 提升层的概率
@@ -22,6 +22,7 @@ private:
 public:
     SkipList();
     ~SkipList();
+    int randomlevel();
     void insert(int value);
     void erase(int value);
     bool search(int value);
