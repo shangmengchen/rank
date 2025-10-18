@@ -101,10 +101,13 @@ void SkipList::display() {
     }
 }
 
-
-
-
-
+// Luna 实现
+LUA_EXPORT_CLASS_BEGIN(SkipList)
+LUA_EXPORT_METHOD(insert)
+LUA_EXPORT_METHOD(erase)
+LUA_EXPORT_METHOD(search)
+LUA_EXPORT_METHOD(display)
+LUA_EXPORT_CLASS_END()
 
 
 

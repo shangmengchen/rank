@@ -1,10 +1,11 @@
 # rank
 
-一个最小可运行的 C++ 项目，包含跳表示例（`zset.hpp`/`zset.cpp`）和测试入口（`test.cpp`）。
+一个最小可运行的 C++ 项目，包含跳表示例（`zset/zset.hpp`/`zset/zset.cpp`）和测试入口（`zset/test.cpp`），支持 Lua 绑定（使用 Luna 库）。
 
 ## 先决条件
 
 - 已安装编译器：建议 MinGW-w64（包含 `g++` 与 `gdb`），或 MSYS2 下的 `mingw-w64-gcc`。
+- Lua 5.4：已安装在 `D:\Lua\lua-5.4.2_Win64_bin\`（包含 `lua54.dll`）。
 - VS Code（可选）并安装扩展：C/C++（ms-vscode.cpptools）。
 
 ## 方式一：使用 VS Code 任务/调试
@@ -21,7 +22,7 @@
 在项目根目录执行：
 
 ```bash
-g++ -std=c++17 -O2 -g test.cpp zset.cpp -o build/rank.exe
+g++ -std=c++17 -O2 -g -Ithird_party/luna -Ilua-dev zset/test.cpp zset/zset.cpp third_party/luna/luna.cpp third_party/luna/lua_archiver.cpp third_party/luna/var_int.cpp -o build/rank.exe -LD:/Lua/lua-5.4.2_Win64_bin -llua54
 ./build/rank.exe  # PowerShell 下可用 .\build\rank.exe
 ```
 
@@ -51,11 +52,14 @@ build/Release/rank.exe
 
 ## 文件说明
 
-- `zset.hpp`：跳表结构与接口声明。
-- `zset.cpp`：跳表实现。
-- `test.cpp`：简单用例（插入、查询、删除并打印层级）。
+- `zset/zset.hpp`：跳表结构与接口声明，包含 Luna 绑定宏。
+- `zset/zset.cpp`：跳表实现，包含 Luna 导出实现。
+- `zset/test.cpp`：Lua 集成测试入口，初始化 Lua 并加载 `rank.lua`。
+- `rank.lua`：Lua 脚本示例，演示如何使用 C++ SkipList 类。
+- `third_party/luna/`：Luna C++ Lua 绑定库。
+- `lua-dev/lua.hpp`：Lua C++ 包装头文件。
 - `.vscode/`：VS Code 构建与调试配置。
-- `CMakeLists.txt`：CMake 构建脚本。
+- `CMakeLists.txt`：CMake 构建脚本，支持 Luna 和 Lua。
 
 ## 常见问题
 

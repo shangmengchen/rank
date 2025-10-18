@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include "luna.h"
 
 const int MAX_LEVEL = 16; // 最大层数
 const float P = 0.5;      // 提升层的概率
@@ -20,6 +21,7 @@ private:
     int level;    // 目前实际使用的层数
 
 public:
+    DECLARE_LUA_CLASS(SkipList);
     SkipList();
     ~SkipList();
     int randomlevel();
@@ -27,5 +29,4 @@ public:
     void erase(int value);
     bool search(int value);
     void display();
-
 };
