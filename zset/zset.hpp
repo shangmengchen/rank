@@ -19,6 +19,7 @@ class SkipList
 private:
     Node *header; // 头节点
     int level;    // 目前实际使用的层数
+    int size;     // 元素数量
 
 public:
     DECLARE_LUA_CLASS(SkipList);
@@ -29,4 +30,7 @@ public:
     void erase(int value);
     bool search(int value);
     void display();
+    int getRankByScore(int value);
+    int getSize() const { return size; }
+    std::vector<int> getTopK(int k);
 };

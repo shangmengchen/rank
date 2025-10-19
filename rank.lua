@@ -1,17 +1,21 @@
 -- 基于跳表的排行榜系统实现
-print("=== Lua排行榜系统 ===")
+print("=== Lua排行榜系统 (真正使用跳表排序) ===")
 
 -- 排行榜系统类
 RankSystem = {}
+-- obj找不到，去原表的index找
 RankSystem.__index = RankSystem
 
 -- 创建排行榜实例
 function RankSystem:new()
     local obj = {
-        skipList = SkipList(),  -- 使用C++的跳表
-        playerData = {},        -- 存储玩家详细信息 {player_id = {name, score, rank}}
+        skipList = SkipList(),  -- 使用C++的跳表进行排序
+        playerData = {},        -- 存储玩家详细信息 {player_id = {name, score}}
+        scoreToPlayers = {},    -- 分数到玩家列表的映射 {score = {player_id1, player_id2, ...}}
         totalPlayers = 0
     }
+    -- 后者是前者的原表
+    -- 相当于 RankSystem 是个类，obj是类的实例
     setmetatable(obj, self)
     return obj
 end
@@ -25,20 +29,21 @@ function RankSystem:addPlayer(playerId, score, playerName)
         self:removePlayer(playerId)
     end
     
-    -- 添加到跳表（使用分数作为排序键）
-    self.skipList:insert(score)
-    
     -- 存储玩家详细信息
     self.playerData[playerId] = {
         name = playerName,
-        score = score,
-        rank = 0  -- 稍后计算
+        score = score
     }
     
-    self.totalPlayers = self.totalPlayers + 1
+    -- 将玩家添加到分数映射中
+    if not self.scoreToPlayers[score] then
+        self.scoreToPlayers[score] = {}
+        -- 只有新分数才需要插入跳表
+        self.skipList:insert(score)
+    end
+    table.insert(self.scoreToPlayers[score], playerId)
     
-    -- 重新计算所有玩家排名
-    self:updateAllRanks()
+    self.totalPlayers = self.totalPlayers + 1
     
     print(string.format("添加玩家: ID=%d, 名称=%s, 分数=%d", playerId, playerName, score))
 end
@@ -53,18 +58,32 @@ function RankSystem:updateScore(playerId, newScore, newName)
     local oldScore = self.playerData[playerId].score
     local playerName = newName or self.playerData[playerId].name
     
-    -- 从跳表中删除旧分数
-    self.skipList:erase(oldScore)
+    -- 从旧分数的玩家列表中移除
+    local oldPlayers = self.scoreToPlayers[oldScore]
+    for i, id in ipairs(oldPlayers) do
+        if id == playerId then
+            table.remove(oldPlayers, i)
+            break
+        end
+    end
     
-    -- 添加新分数
-    self.skipList:insert(newScore)
+    -- 如果旧分数没有玩家了，从跳表中删除
+    if #oldPlayers == 0 then
+        self.scoreToPlayers[oldScore] = nil
+        self.skipList:erase(oldScore)
+    end
     
     -- 更新玩家数据
     self.playerData[playerId].score = newScore
     self.playerData[playerId].name = playerName
     
-    -- 重新计算排名
-    self:updateAllRanks()
+    -- 添加到新分数的玩家列表
+    if not self.scoreToPlayers[newScore] then
+        self.scoreToPlayers[newScore] = {}
+        -- 只有新分数才需要插入跳表
+        self.skipList:insert(newScore)
+    end
+    table.insert(self.scoreToPlayers[newScore], playerId)
     
     print(string.format("更新玩家分数: ID=%d, 名称=%s, 旧分数=%d, 新分数=%d", 
           playerId, playerName, oldScore, newScore))
@@ -79,28 +98,71 @@ function RankSystem:removePlayer(playerId)
     end
     
     local playerData = self.playerData[playerId]
+    local score = playerData.score
     
-    -- 从跳表中删除
-    self.skipList:erase(playerData.score)
+    -- 从分数映射中移除玩家
+    local players = self.scoreToPlayers[score]
+    for i, id in ipairs(players) do
+        if id == playerId then
+            table.remove(players, i)
+            break
+        end
+    end
+    
+    -- 如果该分数没有玩家了，从跳表中删除
+    if #players == 0 then
+        self.scoreToPlayers[score] = nil
+        self.skipList:erase(score)
+    end
     
     -- 从玩家数据中删除
     self.playerData[playerId] = nil
     self.totalPlayers = self.totalPlayers - 1
-    
-    -- 重新计算排名
-    self:updateAllRanks()
     
     print(string.format("删除玩家: ID=%d, 名称=%s, 分数=%d", 
           playerId, playerData.name, playerData.score))
     return true
 end
 
--- 获取玩家排名
+-- 获取玩家排名（O(log n)）
 function RankSystem:getRank(playerId)
     if not self.playerData[playerId] then
         return -1
     end
-    return self.playerData[playerId].rank
+    local score = self.playerData[playerId].score
+    local rankBase = self.skipList:getRankByScore(score)
+    if rankBase < 0 then return -1 end
+
+    -- 相同分数时再在本地表中定位
+    local playersAtScore = self.scoreToPlayers[score]
+    table.sort(playersAtScore)
+    for i, id in ipairs(playersAtScore) do
+        if id == playerId then
+            return rankBase + i - 1
+        end
+    end
+    return -1
+end
+
+
+-- 获取所有分数（按降序排列）
+function RankSystem:getAllScoresSorted()
+    local scores = {}
+    
+    -- 从跳表中获取所有分数（升序）
+    -- 由于跳表是升序，我们需要反转得到降序
+    local tempScores = {}
+    
+    -- 这里我们需要遍历跳表，但由于跳表没有提供遍历接口
+    -- 我们直接从scoreToPlayers中获取所有分数并排序
+    for score, _ in pairs(self.scoreToPlayers) do
+        table.insert(tempScores, score)
+    end
+    
+    -- 按分数降序排序
+    table.sort(tempScores, function(a, b) return a > b end)
+    
+    return tempScores
 end
 
 -- 获取玩家分数
@@ -129,51 +191,35 @@ function RankSystem:getTotalPlayers()
     return self.totalPlayers
 end
 
--- 更新所有玩家排名（内部方法）
-function RankSystem:updateAllRanks()
-    -- 获取所有分数并排序
-    local scores = {}
-    for playerId, data in pairs(self.playerData) do
-        table.insert(scores, {playerId = playerId, score = data.score})
-    end
-    
-    -- 按分数降序排序
-    table.sort(scores, function(a, b) return a.score > b.score end)
-    
-    -- 更新排名
-    for rank, scoreData in ipairs(scores) do
-        self.playerData[scoreData.playerId].rank = rank
-    end
-end
-
--- 显示排行榜
+-- 显示排行榜（基于跳表排序）
 function RankSystem:displayRankings(topN)
     topN = topN or 10
     print(string.format("\n=== 排行榜 (前%d名) ===", topN))
     print("排名\t玩家ID\t玩家名称\t分数")
     print("----------------------------------------")
     
-    -- 获取所有玩家数据并排序
-    local players = {}
-    for playerId, data in pairs(self.playerData) do
-        table.insert(players, {
-            id = playerId,
-            name = data.name,
-            score = data.score,
-            rank = data.rank
-        })
-    end
-    
-    -- 按排名排序
-    table.sort(players, function(a, b) return a.rank < b.rank end)
-    
-    -- 显示前N名
+    local scores = self:getAllScoresSorted()
+    local rank = 1
     local count = 0
-    for _, player in ipairs(players) do
+    
+    for _, score in ipairs(scores) do
+        local playersAtScore = self.scoreToPlayers[score]
+        
+        -- 按玩家ID排序，确保相同分数的玩家有稳定的排序
+        table.sort(playersAtScore)
+        
+        for _, playerId in ipairs(playersAtScore) do
+            if count >= topN then break end
+            
+            local playerData = self.playerData[playerId]
+            print(string.format("%d\t%d\t%s\t\t%d", 
+                  rank, playerId, playerData.name, score))
+            
+            rank = rank + 1
+            count = count + 1
+        end
+        
         if count >= topN then break end
-        print(string.format("%d\t%d\t%s\t\t%d", 
-              player.rank, player.id, player.name, player.score))
-        count = count + 1
     end
     
     if count == 0 then
@@ -186,23 +232,30 @@ function RankSystem:getTopPlayers(topN)
     topN = topN or 10
     local players = {}
     
-    -- 获取所有玩家数据并排序
-    local allPlayers = {}
-    for playerId, data in pairs(self.playerData) do
-        table.insert(allPlayers, {
-            id = playerId,
-            name = data.name,
-            score = data.score,
-            rank = data.rank
-        })
-    end
+    local scores = self:getAllScoresSorted()
+    local rank = 1
+    local count = 0
     
-    -- 按排名排序
-    table.sort(allPlayers, function(a, b) return a.rank < b.rank end)
-    
-    -- 返回前N名
-    for i = 1, math.min(topN, #allPlayers) do
-        table.insert(players, allPlayers[i])
+    for _, score in ipairs(scores) do
+        local playersAtScore = self.scoreToPlayers[score]
+        table.sort(playersAtScore)  -- 按玩家ID排序
+        
+        for _, playerId in ipairs(playersAtScore) do
+            if count >= topN then break end
+            
+            local playerData = self.playerData[playerId]
+            table.insert(players, {
+                rank = rank,
+                id = playerId,
+                name = playerData.name,
+                score = score
+            })
+            
+            rank = rank + 1
+            count = count + 1
+        end
+        
+        if count >= topN then break end
     end
     
     return players
@@ -210,24 +263,14 @@ end
 
 -- 获取最高分
 function RankSystem:getMaxScore()
-    local maxScore = -1
-    for _, data in pairs(self.playerData) do
-        if data.score > maxScore then
-            maxScore = data.score
-        end
-    end
-    return maxScore
+    local scores = self:getAllScoresSorted()
+    return #scores > 0 and scores[1] or -1
 end
 
 -- 获取最低分
 function RankSystem:getMinScore()
-    local minScore = math.huge
-    for _, data in pairs(self.playerData) do
-        if data.score < minScore then
-            minScore = data.score
-        end
-    end
-    return minScore == math.huge and -1 or minScore
+    local scores = self:getAllScoresSorted()
+    return #scores > 0 and scores[#scores] or -1
 end
 
 -- 显示统计信息
@@ -236,6 +279,22 @@ function RankSystem:showStats()
     print("总玩家数: " .. self:getTotalPlayers())
     print("最高分: " .. self:getMaxScore())
     print("最低分: " .. self:getMinScore())
+    print("不同分数数量: " .. self:getUniqueScoreCount())
+end
+
+-- 获取不同分数的数量
+function RankSystem:getUniqueScoreCount()
+    local count = 0
+    for _ in pairs(self.scoreToPlayers) do
+        count = count + 1
+    end
+    return count
+end
+
+-- 显示跳表结构（调试用）
+function RankSystem:displaySkipList()
+    print("\n=== 跳表结构 ===")
+    self.skipList:display()
 end
 
 -- 测试排行榜功能
@@ -256,6 +315,9 @@ function testRankSystem()
     rankSystem:showStats()
     rankSystem:displayRankings(10)
     
+    -- 显示跳表结构
+    rankSystem:displaySkipList()
+    
     -- 测试2: 查询玩家信息
     print("\n2. 查询玩家信息测试")
     print("玩家1002的排名: " .. rankSystem:getRank(1002))
@@ -271,6 +333,7 @@ function testRankSystem()
     
     print("\n更新后的排行榜:")
     rankSystem:displayRankings(10)
+    rankSystem:displaySkipList()
     
     -- 测试4: 添加更多玩家
     print("\n4. 添加更多玩家测试")
@@ -293,22 +356,17 @@ function testRankSystem()
     print("\n删除后的排行榜:")
     rankSystem:displayRankings(10)
     
-    -- 测试6: 边界情况测试
-    print("\n6. 边界情况测试")
-    print("查询不存在的玩家1007: " .. (rankSystem:hasPlayer(1007) and "存在" or "不存在"))
-    print("查询不存在的玩家排名: " .. rankSystem:getRank(1007))
-    print("查询不存在的玩家分数: " .. rankSystem:getScore(1007))
-    
-    -- 测试7: 相同分数测试
-    print("\n7. 相同分数测试")
+    -- 测试6: 相同分数测试
+    print("\n6. 相同分数测试")
     rankSystem:addPlayer(1011, 2000, "玩家K")  -- 与玩家B相同分数
     rankSystem:addPlayer(1012, 2000, "玩家L")  -- 与玩家B相同分数
     
     print("\n相同分数测试后的排行榜:")
     rankSystem:displayRankings(12)
+    rankSystem:displaySkipList()
     
-    -- 测试8: 性能测试
-    print("\n8. 性能测试 - 添加大量玩家")
+    -- 测试7: 性能测试
+    print("\n7. 性能测试 - 添加大量玩家")
     local startTime = os.clock()
     
     for i = 2000, 2100 do

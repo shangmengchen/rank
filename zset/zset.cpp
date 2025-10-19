@@ -7,6 +7,7 @@ SkipList::SkipList() {
     level = 1;
     header = new Node(std::numeric_limits<int>::min(), MAX_LEVEL);
     srand(time(nullptr));
+    size = 0;
 }
 
 SkipList::~SkipList() {
@@ -65,6 +66,7 @@ void SkipList::insert(int value) {
         newNode->forward[i] = update[i]->forward[i];
         update[i]->forward[i] = newNode;
     }
+    size++;
 }
 
 void SkipList::erase(int value) {
@@ -87,6 +89,7 @@ void SkipList::erase(int value) {
         update[i]->forward[i] = current->forward[i];
     }
     delete current;
+    size--;
 }
 
 void SkipList::display() {
@@ -101,12 +104,41 @@ void SkipList::display() {
     }
 }
 
+int SkipList::getRankByScore(int value) {
+    Node* curr = header->forward[0];
+    int rank = 0;
+     while (curr) {
+        rank++;
+        if (curr->value == value)
+            return size - rank + 1; // 转成降序排名
+        curr = curr->forward[0];
+    }
+    return -1;
+}
+
+std::vector<int> SkipList::getTopK(int k) {
+    std::vector<int> res;
+    std::vector<int> scores;
+    Node* curr = header->forward[0];
+    while (curr) {
+        scores.push_back(curr->value);
+        curr = curr->forward[0];
+    }
+    // 跳表是升序，反转取前k个
+    for (int i = scores.size() - 1; i >= 0 && res.size() < k; i--)
+        res.push_back(scores[i]);
+    return res;
+}
+
 // Luna 实现
 LUA_EXPORT_CLASS_BEGIN(SkipList)
 LUA_EXPORT_METHOD(insert)
 LUA_EXPORT_METHOD(erase)
 LUA_EXPORT_METHOD(search)
 LUA_EXPORT_METHOD(display)
+LUA_EXPORT_METHOD(getRankByScore)
+LUA_EXPORT_METHOD(getSize)
+LUA_EXPORT_METHOD(getTopK)
 LUA_EXPORT_CLASS_END()
 
 
