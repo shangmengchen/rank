@@ -130,7 +130,7 @@ function RankSystem:getRank(playerId)
         return -1
     end
     local score = self.playerData[playerId].score
-    local rankBase = self.skipList:getRankByScore(score)
+    local rankBase = self.skipList:getRankByScore(score) -- 用于分数的排名定位
     if rankBase < 0 then return -1 end
 
     -- 相同分数时再在本地表中定位
@@ -311,6 +311,12 @@ function testRankSystem()
     rankSystem:addPlayer(1003, 1800, "玩家C")
     rankSystem:addPlayer(1004, 2200, "玩家D")
     rankSystem:addPlayer(1005, 1600, "玩家E")
+    rankSystem:addPlayer(1006, 1600, "玩家1")
+    rankSystem:addPlayer(1007, 1200, "玩家2")
+    rankSystem:addPlayer(1008, 1200, "玩家3")
+    rankSystem:addPlayer(1009, 1300, "玩家4")
+    rankSystem:addPlayer(10010, 1400, "玩家5")
+    rankSystem:addPlayer(10011, 1800, "玩家6")
     
     rankSystem:showStats()
     rankSystem:displayRankings(10)

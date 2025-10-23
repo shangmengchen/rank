@@ -51,9 +51,6 @@ void SkipList::insert(int value) {
         update[i] = current;
     }
     current = current->forward[0];
-    if (current && current->value == value) {
-        return; // Value already exists
-    }
     int newLevel = randomlevel();
     if (newLevel > level) {
         for (int i = level; i < newLevel; i++) {
@@ -109,8 +106,10 @@ int SkipList::getRankByScore(int value) {
     int rank = 0;
      while (curr) {
         rank++;
-        if (curr->value == value)
+        // 获取该分数的第一位排名
+        if (curr->value == value && (curr->forward[0] && curr->forward[0]->value != value || curr->forward[0] == nullptr)) {
             return size - rank + 1; // 转成降序排名
+        }
         curr = curr->forward[0];
     }
     return -1;

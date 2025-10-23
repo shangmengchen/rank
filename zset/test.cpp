@@ -1,10 +1,14 @@
 #include "zset.hpp"
 #include <iostream>
 #include "lua.hpp"
-
+#include <windows.h>
 using namespace std;
 
 int main() {
+    #ifdef _WIN32
+        system("chcp 65001 >nul");
+        SetConsoleOutputCP(CP_UTF8);
+    #endif
     // 初始化 Lua
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);

@@ -71,6 +71,8 @@ iostream
 -
 lua.hpp
 E:/code/smc/rank/zset/lua.hpp
+windows.h
+-
 
 E:/code/smc/rank/zset/zset.hpp
 iostream
