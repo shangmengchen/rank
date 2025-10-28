@@ -13,13 +13,13 @@ int main() {
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
     
-    // 注册 SkipList 类到 Lua
-    SkipList temp_obj;  // 使用栈对象，自动管理内存
+    // 注册 SkipList<int> 类到 Lua
+    SkipList<int> temp_obj;  // 使用栈对象，自动管理内存
     lua_register_class(L, &temp_obj);
     
     // 创建全局构造函数
     auto create_skiplist = [](lua_State* L) -> int {
-        SkipList* obj = new SkipList();
+        SkipList<int>* obj = new SkipList<int>();
         lua_push_object(L, obj);
         return 1;
     };
